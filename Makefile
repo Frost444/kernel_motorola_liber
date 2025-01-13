@@ -411,6 +411,27 @@ PERL		= perl
 PYTHON		= python
 CHECK		= sparse
 
+ifneq ($(LLVM),)
+    ifeq ($(ARCH),arm64)
+        # Otimizações para Cortex-A53
+        KBUILD_CFLAGS += -mcpu=cortex-a53 -mtune=cortex-a53 -march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard
+        
+        # Otimizações para Cortex-A73
+        KBUILD_CFLAGS += -mcpu=cortex-a73 -mtune=cortex-a73 -march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard
+    endif
+
+    ifdef CONFIG_LLVM_POLLY
+        KBUILD_CFLAGS += -mllvm -polly \
+                         -mllvm -polly-run-dce \
+                         -mllvm -polly-run-inliner \
+                         -mllvm -polly-opt-fusion=max \
+                         -mllvm -polly-ast-use-context \
+                         -mllvm -polly-detect-keep-going \
+                         -mllvm -polly-vectorizer=stripmine \
+                         -mllvm -polly-invariant-load-hoisting
+    endif
+endif
+
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
 NOSTDINC_FLAGS  =
