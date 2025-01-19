@@ -622,6 +622,14 @@ config ARCH_SUPPORTS_LTO_CLANG
 	  - compiling inline assembly with clang's integrated assembler,
 	  - and linking with either lld or GNU gold w/ LLVMgold.
 
+config LLVM_POLLY
+	bool "Enable LLVM's polyhedral loop optimizer (Polly)"
+	help
+	  This option enables LLVM's polyhedral loop optimizer known as Polly.
+	  Polly is able to optimize various loops throughout the kernel for
+	  maximum cache locality. This requires an LLVM toolchain explicitly
+	  compiled with Polly support.
+
 config ARCH_SUPPORTS_THINLTO
 	bool
 	help
