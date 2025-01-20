@@ -260,6 +260,7 @@ KBUILD_CFLAGS	+= -mllvm -polly \
 		   -mllvm -polly-vectorizer=stripmine \
 		   -mllvm -polly-invariant-load-hoisting
 endif
+
 ifeq ($(mixed-targets),1)
 # ===========================================================================
 # We're called with mixed targets (*config and build targets).
@@ -743,15 +744,9 @@ else
 KBUILD_CFLAGS   += -pipe -O3
 endif
 
-# Tell compiler to tune the performance of the code for a specified
-# target processor
-ifeq ($(cc-name),gcc)
-KBUILD_CFLAGS += -mcpu=cortex-a55+crc+crypto -mtune=cortex-a55 -funswitch-loops -funroll-loops -fpeel-loops -fsplit-loops -Wno-error
-KBUILD_AFLAGS += -mcpu=cortex-a55+crc+crypto -mtune=cortex-a55 -funswitch-loops -funroll-loops -fpeel-loops -fsplit-loops -Wno-error
-else ifeq ($(cc-name),clang)
-KBUILD_CFLAGS += -mcpu=cortex-a55 -mtune=cortex-a55 -funroll-loops
-KBUILD_AFLAGS += -mcpu=cortex-a55 -mtune=cortex-a55 -funroll-loops
-endif
+# Optimize for lahaina's little cpu
+KBUILD_CFLAGS += -mcpu=cortex-a55
+KBUILD_AFLAGS += -mcpu=cortex-a55
 
 # Initialize all stack variables with a zero value.
 # Future support for zero initialization is still being debated, see
@@ -1999,4 +1994,3 @@ FORCE:
 # Declare the contents of the .PHONY variable as phony.  We keep that
 # information in a variable so we can use it in if_changed and friends.
 .PHONY: $(PHONY)
-endif
