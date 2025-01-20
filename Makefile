@@ -761,7 +761,7 @@ endif
 
 ifeq ($(cc-name),clang)
 ifdef CONFIG_LLVM_POLLY
-KBUILD_CFLAGS	+= -mllvm -polly \
+KBUILD_CFLAGS	+= -mllvm --polly \
 		   -mllvm --polly-run-inliner \
 		   -mllvm --polly-opt-fusion=max \
 		   -mllvm --polly-ast-use-context \
