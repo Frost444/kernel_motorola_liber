@@ -411,39 +411,6 @@ PERL		= perl
 PYTHON		= python
 CHECK		= sparse
 
-ifneq ($(LLVM),)
-    ifeq ($(ARCH),arm64)
-        KBUILD_CFLAGS += -mcpu=cortex-a55 -mtune=cortex-a55 -march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard
-    endif
-endif
-
-ifneq ($(LLVM),)
-    ifdef CONFIG_LLVM_POLLY
-        KBUILD_CFLAGS += -mllvm -polly \
-                         -mllvm -polly-run-dce \
-                         -mllvm -polly-run-inliner \
-                         -mllvm -polly-opt-fusion=max \
-                         -mllvm -polly-ast-use-context \
-                         -mllvm -polly-detect-keep-going \
-                         -mllvm -polly-vectorizer=stripmine \
-                         -mllvm -polly-invariant-load-hoisting
-    endif
-endif
-
-ifdef CONFIG_INLINE_OPTIMIZATION
-ifdef ($(LLVM),)
-KBUILD_CFLAGS	+= -mllvm -inline-threshold=1000
-KBUILD_CFLAGS	+= -mllvm -inlinehint-threshold=750
-else
-KBUILD_CFLAGS	+= --param max-inline-insns-single=600
-KBUILD_CFLAGS	+= --param max-inline-insns-auto=750
-# We limit inlining to 5KB on the stack.
-KBUILD_CFLAGS	+= --param large-stack-frame=12288
-KBUILD_CFLAGS	+= --param inline-min-speedup=5
-KBUILD_CFLAGS	+= --param inline-unit-growth=60
-endif
-endif
-
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
 NOSTDINC_FLAGS  =
@@ -493,6 +460,7 @@ KBUILD_CFLAGS_MODULE  := -DMODULE
 KBUILD_LDFLAGS_MODULE := -T $(srctree)/scripts/module-common.lds
 GCC_PLUGINS_CFLAGS :=
 CLANG_FLAGS :=
+TARGET_BUILD_VARIANT := user
 
 export ARCH SRCARCH CONFIG_SHELL HOSTCC HOSTCFLAGS CROSS_COMPILE LD CC
 export CPP AR NM STRIP OBJCOPY OBJDUMP READELF HOSTLDFLAGS HOST_LOADLIBES
@@ -506,6 +474,8 @@ export KBUILD_AFLAGS AFLAGS_KERNEL AFLAGS_MODULE
 export KBUILD_AFLAGS_MODULE KBUILD_CFLAGS_MODULE KBUILD_LDFLAGS_MODULE
 export KBUILD_AFLAGS_KERNEL KBUILD_CFLAGS_KERNEL
 export KBUILD_ARFLAGS
+
+export TARGET_BUILD_VARIANT
 
 # When compiling out-of-tree modules, put MODVERDIR in the module
 # tree rather than in the kernel tree. The kernel tree might
@@ -768,15 +738,21 @@ KBUILD_CFLAGS   += -pipe -O3
 endif
 endif
 
-# Tell compiler to tune the performance of the code for a specified
-# target processor
-ifeq ($(cc-name),gcc)
-KBUILD_CFLAGS += -mcpu=cortex-a55+crc+crypto -mtune=cortex-a55 -funswitch-loops -funroll-loops -fpeel-loops -fsplit-loops -Wno-error
-KBUILD_AFLAGS += -mcpu=cortex-a55+crc+crypto -mtune=cortex-a55 -funswitch-loops -funroll-loops -fpeel-loops -fsplit-loops -Wno-error
-else ifeq ($(cc-name),clang)
-KBUILD_CFLAGS += -mcpu=cortex-a55+crc+crypto -mtune=cortex-a55 -funroll-loops
-KBUILD_AFLAGS += -mcpu=cortex-a55+crc+crypto -mtune=cortex-a55 -funroll-loops
+ifeq ($(cc-name),clang)
+# Enable Clang Polly optimizations
+KBUILD_CFLAGS	+= -mllvm -polly \
+		   -mllvm -polly-run-dce \
+		   -mllvm -polly-ast-use-context \
+		   -mllvm -polly-invariant-load-hoisting \
+		   -mllvm -polly-loopfusion-greedy=1 \
+		   -mllvm -polly-postopts=1 \
+		   -mllvm -polly-reschedule=1 \
+		   -mllvm -polly-run-inliner \
+		   -mllvm -polly-vectorizer=stripmine
 endif
+
+# CPU opts
+KBUILD_CFLAGS += -march=armv8-a -mtune=cortex-a55 -mfpu=neon-fp-armv8 -mfloat-abi=hard
 
 ifdef CONFIG_CC_WERROR
 KBUILD_CFLAGS  += -Werror
