@@ -250,6 +250,16 @@ ifneq ($(filter install,$(MAKECMDGOALS)),)
         endif
 endif
 
+ifeq ($(cc-name),clang)
+ifdef CONFIG_LLVM_POLLY
+KBUILD_CFLAGS	+= -mllvm -polly \
+		   -mllvm -polly-run-inliner \
+		   -mllvm -polly-opt-fusion=max \
+		   -mllvm -polly-ast-use-context \
+		   -mllvm -polly-detect-keep-going \
+		   -mllvm -polly-vectorizer=stripmine \
+		   -mllvm -polly-invariant-load-hoisting
+endif
 ifeq ($(mixed-targets),1)
 # ===========================================================================
 # We're called with mixed targets (*config and build targets).
@@ -728,53 +738,19 @@ KBUILD_CFLAGS	+= $(call cc-disable-warning, unused-function)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, unused-variable)
 
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
-KBUILD_CFLAGS   += -Os
+KBUILD_CFLAGS   += -pipe -Os
 else
-KBUILD_CFLAGS   += -O3
+KBUILD_CFLAGS   += -pipe -O3
+endif
+
+# Tell compiler to tune the performance of the code for a specified
+# target processor
 ifeq ($(cc-name),gcc)
-KBUILD_CFLAGS	+= -mcpu=cortex-a76.cortex-a55+crypto+crc
-endif
-ifeq ($(cc-name),clang)
-KBUILD_CFLAGS	+= -mcpu=cortex-a76+crypto+crc
-ifdef CONFIG_LTO_CLANG
-KBUILD_CFLAG	+= -fwhole-program-vtables
-endif
-ifdef CONFIG_GCC_GRAPHITE
-GRAPHITE_FLAGS	+= -floop-block \
-			 -ftree-vectorize \
-			 -floop-strip-mine \
-			 -floop-interchange \
-			 -fgraphite-identity \
-			 -floop-nest-optimize \
-			 -ftree-loop-distribution
-OPT_FLAGS	+= $(GRAPHITE_FLAGS)
-KBUILD_LDFLAGS	+= $(GRAPHITE_FLAGS)
-endif
-ifdef CONFIG_LLVM_POLLY
-KBUILD_CFLAGS	+= -mllvm -polly \
-		   -mllvm -polly-run-inliner \
-		   -mllvm -polly-reschedule=1 \
-		   -mllvm -polly-loopfusion-greedy=1 \
-		   -mllvm -polly-postopts=1 \
-		   -mllvm -polly-num-threads=0 \
-	           -mllvm -polly-omp-backend=LLVM \
-		   -mllvm -polly-scheduling=dynamic \
-		   -mllvm -polly-scheduling-chunksize=1 \
-		   -mllvm -polly-isl-arg=--no-schedule-serialize-sccs \
-		   -mllvm -polly-ast-use-context \
-		   -mllvm -polly-position=before-vectorizer \
-		   -mllvm -polly-vectorizer=stripmine \
-		   -mllvm -polly-detect-profitability-min-per-loop-insts=40 \
-		   -mllvm -polly-invariant-load-hoisting
-		   
-KBUILD_CFLAGS += $(POLLY_FLAGS)
-KBUILD_AFLAGS += $(POLLY_FLAGS)
-KBUILD_LDFLAGS += $(POLLY_FLAGS)
-endif
-endif
-endif
-ifdef CONFIG_MINIMAL_TRACING_FOR_IORAP
-KBUILD_CFLAGS   += -DNOTRACE
+KBUILD_CFLAGS += -mcpu=cortex-a55+crc+crypto -mtune=cortex-a55 -funswitch-loops -funroll-loops -fpeel-loops -fsplit-loops -Wno-error
+KBUILD_AFLAGS += -mcpu=cortex-a55+crc+crypto -mtune=cortex-a55 -funswitch-loops -funroll-loops -fpeel-loops -fsplit-loops -Wno-error
+else ifeq ($(cc-name),clang)
+KBUILD_CFLAGS += -mcpu=cortex-a55 -mtune=cortex-a55 -funroll-loops
+KBUILD_AFLAGS += -mcpu=cortex-a55 -mtune=cortex-a55 -funroll-loops
 endif
 
 # Initialize all stack variables with a zero value.
