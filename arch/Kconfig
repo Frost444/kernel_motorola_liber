@@ -640,6 +640,8 @@ choice
 	help
 	  This option turns on Link-Time Optimization (LTO).
 
+
+
 config LTO_NONE
 	bool "None"
 
