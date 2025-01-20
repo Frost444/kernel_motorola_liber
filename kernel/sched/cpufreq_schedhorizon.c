@@ -12,7 +12,6 @@
 
 #include <linux/sched/cpufreq.h>
 #include <trace/events/power.h>
-#include <trace/hooks/sched.h>
 
 static unsigned int default_efficient_freq[] = {0};
 static u64 default_up_delay[] = {0};
