@@ -738,8 +738,7 @@ KBUILD_CFLAGS   += -pipe -O3
 endif
 endif
 
-ifeq ($(cc-name),clang)
-# Enable Clang Polly optimizations
+ifdef CONFIG_LLVM_POLLY
 KBUILD_CFLAGS	+= -mllvm -polly \
 		   -mllvm -polly-run-dce \
 		   -mllvm -polly-ast-use-context \
@@ -749,6 +748,29 @@ KBUILD_CFLAGS	+= -mllvm -polly \
 		   -mllvm -polly-reschedule=1 \
 		   -mllvm -polly-run-inliner \
 		   -mllvm -polly-vectorizer=stripmine
+endif
+
+# Polly may optimise loops with dead paths beyound what the linker
+# can understand. This may negate the effect of the linker's DCE
+# so we tell Polly to perfom proven DCE on the loops it optimises
+# in order to preserve the overall effect of the linker's DCE.
+ifdef CONFIG_LD_DEAD_CODE_DATA_ELIMINATION
+POLLY_FLAGS	+= -mllvm -polly-run-dce
+endif
+endif
+
+ifdef CONFIG_INLINE_OPTIMIZATION
+ifdef ($(LLVM),)
+KBUILD_CFLAGS	+= -mllvm -inline-threshold=1000
+KBUILD_CFLAGS	+= -mllvm -inlinehint-threshold=750
+else
+KBUILD_CFLAGS	+= --param max-inline-insns-single=600
+KBUILD_CFLAGS	+= --param max-inline-insns-auto=750
+# We limit inlining to 5KB on the stack.
+KBUILD_CFLAGS	+= --param large-stack-frame=12288
+KBUILD_CFLAGS	+= --param inline-min-speedup=5
+KBUILD_CFLAGS	+= --param inline-unit-growth=60
+endif
 endif
 
 # CPU opts
