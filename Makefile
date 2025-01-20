@@ -745,32 +745,6 @@ KBUILD_CFLAGS += -mcpu=cortex-a55+crc+crypto -mtune=cortex-a55 -funroll-loops
 KBUILD_AFLAGS += -mcpu=cortex-a55+crc+crypto -mtune=cortex-a55 -funroll-loops
 endif
 
-ifdef CONFIG_INLINE_OPTIMIZATION
-ifdef ($(LLVM),)
-KBUILD_CFLAGS	+= -mllvm -inline-threshold=1000
-KBUILD_CFLAGS	+= -mllvm -inlinehint-threshold=750
-else
-KBUILD_CFLAGS	+= --param max-inline-insns-single=600
-KBUILD_CFLAGS	+= --param max-inline-insns-auto=750
-# We limit inlining to 5KB on the stack.
-KBUILD_CFLAGS	+= --param large-stack-frame=12288
-KBUILD_CFLAGS	+= --param inline-min-speedup=5
-KBUILD_CFLAGS	+= --param inline-unit-growth=60
-endif
-endif
-
-ifeq ($(cc-name),clang)
-ifdef CONFIG_LLVM_POLLY
-KBUILD_CFLAGS	+= -mllvm -polly \
-		   -mllvm -polly-run-inliner \
-		   -mllvm -polly-opt-fusion=max \
-		   -mllvm -polly-ast-use-context \
-		   -mllvm -polly-detect-keep-going \
-		   -mllvm -polly-vectorizer=stripmine \
-		   -mllvm -polly-invariant-load-hoisting
-endif
-endif
-
 ifdef CONFIG_CC_WERROR
 KBUILD_CFLAGS  += -Werror
 endif
