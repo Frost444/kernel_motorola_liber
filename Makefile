@@ -770,6 +770,7 @@ KBUILD_CFLAGS += -march=armv8-a -mtune=cortex-a55 -mfpu=neon-fp-armv8 -mfloat-ab
 ifdef CONFIG_CC_WERROR
 KBUILD_CFLAGS  += -Werror
 endif
+endif
 
 # Initialize all stack variables with a zero value.
 # Future support for zero initialization is still being debated, see
