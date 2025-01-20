@@ -413,13 +413,11 @@ CHECK		= sparse
 
 ifneq ($(LLVM),)
     ifeq ($(ARCH),arm64)
-        # Otimizações para Cortex-A53
-        KBUILD_CFLAGS += -mcpu=cortex-a55 -mtune=cortex-a55 -march=armv8-2a -mfpu=neon-fp-armv8 -mfloat-abi=hard
-        
-        # Otimizações para Cortex-A73
-        KBUILD_CFLAGS += -mcpu=cortex-a76 -mtune=cortex-a76 -march=armv8-2a -mfpu=neon-fp-armv8 -mfloat-abi=hard
+        KBUILD_CFLAGS += -mcpu=cortex-a55 -mtune=cortex-a55 -march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard
     endif
+endif
 
+ifneq ($(LLVM),)
     ifdef CONFIG_LLVM_POLLY
         KBUILD_CFLAGS += -mllvm -polly \
                          -mllvm -polly-run-dce \
@@ -430,6 +428,20 @@ ifneq ($(LLVM),)
                          -mllvm -polly-vectorizer=stripmine \
                          -mllvm -polly-invariant-load-hoisting
     endif
+endif
+
+ifdef CONFIG_INLINE_OPTIMIZATION
+ifdef ($(LLVM),)
+KBUILD_CFLAGS	+= -mllvm -inline-threshold=1000
+KBUILD_CFLAGS	+= -mllvm -inlinehint-threshold=750
+else
+KBUILD_CFLAGS	+= --param max-inline-insns-single=600
+KBUILD_CFLAGS	+= --param max-inline-insns-auto=750
+# We limit inlining to 5KB on the stack.
+KBUILD_CFLAGS	+= --param large-stack-frame=12288
+KBUILD_CFLAGS	+= --param inline-min-speedup=5
+KBUILD_CFLAGS	+= --param inline-unit-growth=60
+endif
 endif
 
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
