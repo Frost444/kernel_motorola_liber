@@ -728,54 +728,40 @@ KBUILD_CFLAGS	+= $(call cc-disable-warning, unused-function)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, unused-variable)
 
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
-KBUILD_CFLAGS   += -Os
+KBUILD_CFLAGS   += -pipe -Os
 else
-KBUILD_CFLAGS   += -O3
-ifeq ($(cc-name),gcc)
-KBUILD_CFLAGS	+= -mcpu=cortex-a76.cortex-a55+crypto+crc
+KBUILD_CFLAGS   += -pipe -O3
 endif
-ifeq ($(cc-name),clang)
-KBUILD_CFLAGS	+= -mcpu=cortex-a76+crypto+crc
-ifdef CONFIG_LTO_CLANG
-KBUILD_CFLAG	+= -fwhole-program-vtables
 endif
-ifdef CONFIG_GCC_GRAPHITE
-GRAPHITE_FLAGS	+= -floop-block \
-			 -ftree-vectorize \
-			 -floop-strip-mine \
-			 -floop-interchange \
-			 -fgraphite-identity \
-			 -floop-nest-optimize \
-			 -ftree-loop-distribution
-OPT_FLAGS	+= $(GRAPHITE_FLAGS)
-KBUILD_LDFLAGS	+= $(GRAPHITE_FLAGS)
-endif
+
 ifdef CONFIG_LLVM_POLLY
 KBUILD_CFLAGS	+= -mllvm -polly \
-		   -mllvm -polly-run-inliner \
-		   -mllvm -polly-reschedule=1 \
+		   -mllvm -polly-run-dce \
+		   -mllvm -polly-ast-use-context \
+		   -mllvm -polly-invariant-load-hoisting \
 		   -mllvm -polly-loopfusion-greedy=1 \
 		   -mllvm -polly-postopts=1 \
-		   -mllvm -polly-num-threads=0 \
-	           -mllvm -polly-omp-backend=LLVM \
-		   -mllvm -polly-scheduling=dynamic \
-		   -mllvm -polly-scheduling-chunksize=1 \
-		   -mllvm -polly-isl-arg=--no-schedule-serialize-sccs \
-		   -mllvm -polly-ast-use-context \
-		   -mllvm -polly-position=before-vectorizer \
-		   -mllvm -polly-vectorizer=stripmine \
-		   -mllvm -polly-detect-profitability-min-per-loop-insts=40 \
-		   -mllvm -polly-invariant-load-hoisting
-		   
-KBUILD_CFLAGS += $(POLLY_FLAGS)
-KBUILD_AFLAGS += $(POLLY_FLAGS)
-KBUILD_LDFLAGS += $(POLLY_FLAGS)
+		   -mllvm -polly-reschedule=1 \
+		   -mllvm -polly-run-inliner \
+		   -mllvm -polly-vectorizer=stripmine
+endif
+
+ifdef CONFIG_INLINE_OPTIMIZATION
+ifdef ($(LLVM),)
+KBUILD_CFLAGS	+= -mllvm -inline-threshold=1000
+KBUILD_CFLAGS	+= -mllvm -inlinehint-threshold=750
+else
+KBUILD_CFLAGS	+= --param max-inline-insns-single=600
+KBUILD_CFLAGS	+= --param max-inline-insns-auto=750
+# We limit inlining to 5KB on the stack.
+KBUILD_CFLAGS	+= --param large-stack-frame=12288
+KBUILD_CFLAGS	+= --param inline-min-speedup=5
+KBUILD_CFLAGS	+= --param inline-unit-growth=60
 endif
 endif
-endif
-ifdef CONFIG_MINIMAL_TRACING_FOR_IORAP
-KBUILD_CFLAGS   += -DNOTRACE
-endif
+
+# CPU opts
+KBUILD_CFLAGS += -march=armv8-a -mtune=cortex-a55 -mfpu=neon-fp-armv8 -mfloat-abi=hard
 
 # Initialize all stack variables with a zero value.
 # Future support for zero initialization is still being debated, see
