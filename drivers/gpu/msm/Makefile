@@ -1,4 +1,8 @@
 ccflags-y := -Iinclude/linux
+ccflags-y := -funsafe-math-optimizations
+ccflags-y := -funroll-loops
+ccflags-y := -ffast-math
+ccflags-y := -Ofast
 
 msm_kgsl_core-y = \
 	kgsl.o \
