@@ -410,6 +410,39 @@ PERL		= perl
 PYTHON		= python
 CHECK		= sparse
 
+ifneq ($(LLVM),)
+    ifeq ($(ARCH),arm64)
+        KBUILD_CFLAGS += -mcpu=cortex-a53 -mtune=cortex-a53 -march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard
+    endif
+endif
+
+ifneq ($(LLVM),)
+    ifdef CONFIG_LLVM_POLLY
+        KBUILD_CFLAGS += -mllvm -polly \
+                         -mllvm -polly-run-dce \
+                         -mllvm -polly-run-inliner \
+                         -mllvm -polly-opt-fusion=max \
+                         -mllvm -polly-ast-use-context \
+                         -mllvm -polly-detect-keep-going \
+                         -mllvm -polly-vectorizer=stripmine \
+                         -mllvm -polly-invariant-load-hoisting
+    endif
+endif
+
+ifdef CONFIG_INLINE_OPTIMIZATION
+ifdef ($(LLVM),)
+KBUILD_CFLAGS	+= -mllvm -inline-threshold=1000
+KBUILD_CFLAGS	+= -mllvm -inlinehint-threshold=750
+else
+KBUILD_CFLAGS	+= --param max-inline-insns-single=600
+KBUILD_CFLAGS	+= --param max-inline-insns-auto=750
+# We limit inlining to 5KB on the stack.
+KBUILD_CFLAGS	+= --param large-stack-frame=12288
+KBUILD_CFLAGS	+= --param inline-min-speedup=5
+KBUILD_CFLAGS	+= --param inline-unit-growth=60
+endif
+endif
+
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
 NOSTDINC_FLAGS  =
@@ -733,43 +766,6 @@ else
 KBUILD_CFLAGS   += -pipe -O3
 endif
 endif
-
-ifdef CONFIG_LLVM_POLLY
-KBUILD_CFLAGS	+= -mllvm -polly \
-		   -mllvm -polly-run-dce \
-		   -mllvm -polly-ast-use-context \
-		   -mllvm -polly-invariant-load-hoisting \
-		   -mllvm -polly-loopfusion-greedy=1 \
-		   -mllvm -polly-postopts=1 \
-		   -mllvm -polly-reschedule=1 \
-		   -mllvm -polly-run-inliner \
-		   -mllvm -polly-vectorizer=stripmine
-endif
-
-# Polly may optimise loops with dead paths beyound what the linker
-# can understand. This may negate the effect of the linker's DCE
-# so we tell Polly to perfom proven DCE on the loops it optimises
-# in order to preserve the overall effect of the linker's DCE.
-ifdef CONFIG_LD_DEAD_CODE_DATA_ELIMINATION
-POLLY_FLAGS	+= -mllvm -polly-run-dce
-endif
-
-ifdef CONFIG_INLINE_OPTIMIZATION
-ifdef ($(LLVM),)
-KBUILD_CFLAGS	+= -mllvm -inline-threshold=1000
-KBUILD_CFLAGS	+= -mllvm -inlinehint-threshold=750
-else
-KBUILD_CFLAGS	+= --param max-inline-insns-single=600
-KBUILD_CFLAGS	+= --param max-inline-insns-auto=750
-# We limit inlining to 5KB on the stack.
-KBUILD_CFLAGS	+= --param large-stack-frame=12288
-KBUILD_CFLAGS	+= --param inline-min-speedup=5
-KBUILD_CFLAGS	+= --param inline-unit-growth=60
-endif
-endif
-
-# CPU opts
-KBUILD_CFLAGS += -march=armv8-a -mtune=cortex-a55 -mfpu=neon-fp-armv8 -mfloat-abi=hard
 
 # Initialize all stack variables with a zero value.
 # Future support for zero initialization is still being debated, see
