@@ -412,7 +412,7 @@ CHECK		= sparse
 
 ifneq ($(LLVM),)
     ifeq ($(ARCH),arm64)
-        KBUILD_CFLAGS += -mcpu=cortex-a53 -mtune=cortex-a53 -march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard
+        KBUILD_CFLAGS += -mcpu=cortex-a53 -mtune=cortex-a55 -march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard
     endif
 endif
 
