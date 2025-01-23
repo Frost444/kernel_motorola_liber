@@ -416,33 +416,6 @@ ifneq ($(LLVM),)
     endif
 endif
 
-ifneq ($(LLVM),)
-    ifdef CONFIG_LLVM_POLLY
-        KBUILD_CFLAGS += -mllvm -polly \
-                         -mllvm -polly-run-dce \
-                         -mllvm -polly-run-inliner \
-                         -mllvm -polly-opt-fusion=max \
-                         -mllvm -polly-ast-use-context \
-                         -mllvm -polly-detect-keep-going \
-                         -mllvm -polly-vectorizer=stripmine \
-                         -mllvm -polly-invariant-load-hoisting
-    endif
-endif
-
-ifdef CONFIG_INLINE_OPTIMIZATION
-ifdef ($(LLVM),)
-KBUILD_CFLAGS	+= -mllvm -inline-threshold=1000
-KBUILD_CFLAGS	+= -mllvm -inlinehint-threshold=750
-else
-KBUILD_CFLAGS	+= --param max-inline-insns-single=600
-KBUILD_CFLAGS	+= --param max-inline-insns-auto=750
-# We limit inlining to 5KB on the stack.
-KBUILD_CFLAGS	+= --param large-stack-frame=12288
-KBUILD_CFLAGS	+= --param inline-min-speedup=5
-KBUILD_CFLAGS	+= --param inline-unit-growth=60
-endif
-endif
-
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
 NOSTDINC_FLAGS  =
