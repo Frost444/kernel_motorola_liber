@@ -16,18 +16,12 @@
 #include <linux/sched/cpufreq.h>
 #include <trace/events/power.h>
 #include <linux/sched/sysctl.h>
-#include <uapi/linux/sched/types.h>
-#include <linux/kthread.h>
-#include <linux/slab.h>
 
 static unsigned int default_efficient_freq_lp[] = {CONFIG_SCHEDHORIZON_DEFAULT_EFFICIENT_FREQ_LP};
 static u64 default_up_delay_lp[] = {CONFIG_SCHEDHORIZON_DEFAULT_UP_DELAY_LP * NSEC_PER_MSEC};
 
 static unsigned int default_efficient_freq_hp[] = {CONFIG_SCHEDHORIZON_DEFAULT_EFFICIENT_FREQ_HP};
 static u64 default_up_delay_hp[] = {CONFIG_SCHEDHORIZON_DEFAULT_UP_DELAY_HP * NSEC_PER_MSEC};
-
-static unsigned int default_efficient_freq_pr[] = {CONFIG_SCHEDHORIZON_DEFAULT_EFFICIENT_FREQ_PR};
-static u64 default_up_delay_pr[] = {CONFIG_SCHEDHORIZON_DEFAULT_UP_DELAY_PR * NSEC_PER_MSEC};
 
 struct sugov_tunables {
 	struct gov_attr_set	attr_set;
@@ -773,8 +767,7 @@ static ssize_t efficient_freq_store(struct gov_attr_set *attr_set,
 	    tunables->nefficient_freq = new_num;
 	    tunables->current_step = 0;
 	    if (old != default_efficient_freq_lp
-	     && old != default_efficient_freq_hp
-	     && old != default_efficient_freq_pr)
+	     && old != default_efficient_freq_hp)
 	        kfree(old);
 	}
 
@@ -796,8 +789,7 @@ static ssize_t up_delay_store(struct gov_attr_set *attr_set,
 	    tunables->nup_delay = new_num;
 	    tunables->current_step = 0;
 	    if (old != default_up_delay_lp
-	     && old != default_up_delay_hp
-	     && old != default_up_delay_pr)
+	     && old != default_up_delay_hp)
 	        kfree(old);
 	}
 
@@ -853,7 +845,7 @@ static void sugov_policy_free(struct sugov_policy *sg_policy)
 static int sugov_kthread_create(struct sugov_policy *sg_policy)
 {
 	struct task_struct *thread;
-	struct sched_param param = { .sched_priority = MAX_USER_RT_PRIO / 2 };
+	struct sched_param param = { .sched_priority = MAX_USER_RT_PRIO - 1 };
 	struct cpufreq_policy *policy = sg_policy->policy;
 	int ret;
 
@@ -1016,11 +1008,6 @@ static int sugov_init(struct cpufreq_policy *policy)
     		tunables->nefficient_freq = ARRAY_SIZE(default_efficient_freq_hp);
 		tunables->up_delay = default_up_delay_hp;
 		tunables->nup_delay = ARRAY_SIZE(default_up_delay_hp);
-	} else {
-		tunables->efficient_freq = default_efficient_freq_pr;
-    		tunables->nefficient_freq = ARRAY_SIZE(default_efficient_freq_pr);
-		tunables->up_delay = default_up_delay_pr;
-		tunables->nup_delay = ARRAY_SIZE(default_up_delay_pr);
 	}
 
 	policy->governor_data = sg_policy;
@@ -1183,8 +1170,4 @@ struct cpufreq_governor *cpufreq_default_governor(void)
 }
 #endif
 
-static int __init sugov_register(void)
-{
-	return cpufreq_register_governor(&schedhorizon_gov);
-}
-fs_initcall(sugov_register);
+cpufreq_governor_init(schedhorizon_gov);
