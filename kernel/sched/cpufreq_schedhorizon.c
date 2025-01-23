@@ -16,6 +16,9 @@
 #include <linux/sched/cpufreq.h>
 #include <trace/events/power.h>
 #include <linux/sched/sysctl.h>
+#include <uapi/linux/sched/types.h>
+#include <linux/kthread.h>
+#include <linux/slab.h>
 
 static unsigned int default_efficient_freq_lp[] = {CONFIG_SCHEDHORIZON_DEFAULT_EFFICIENT_FREQ_LP};
 static u64 default_up_delay_lp[] = {CONFIG_SCHEDHORIZON_DEFAULT_UP_DELAY_LP * NSEC_PER_MSEC};
