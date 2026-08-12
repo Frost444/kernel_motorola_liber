@@ -24,11 +24,18 @@
 #include <arpa/inet.h>
 #include <openssl/opensslv.h>
 #include <openssl/bio.h>
+#include <openssl/cms.h>
 #include <openssl/evp.h>
 #include <openssl/pem.h>
 #include <openssl/err.h>
 #include <openssl/engine.h>
-#include <openssl/cms.h>
+
+/*
+ * OpenSSL 3.0 deprecates the OpenSSL's ENGINE API.
+ *
+ * Remove this if/when that API is no longer used
+ */
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
 struct module_signature {
 	uint8_t		algo;		/* Public-key crypto algorithm [0] */
@@ -70,6 +77,7 @@ static void display_openssl_errors(int l)
 	}
 }
 
+#ifndef OPENSSL_NO_ENGINE
 static void drain_openssl_errors(void)
 {
 	const char *file;
@@ -79,6 +87,7 @@ static void drain_openssl_errors(void)
 		return;
 	while (ERR_get_error_line(&file, &line)) {}
 }
+#endif
 
 #define ERR(cond, fmt, ...)				\
 	do {						\
@@ -113,7 +122,9 @@ static int pem_pw_cb(char *buf, int len, int w, void *v)
 static EVP_PKEY *read_private_key(const char *private_key_name)
 {
 	EVP_PKEY *private_key;
+	BIO *b;
 
+#ifndef OPENSSL_NO_ENGINE
 	if (!strncmp(private_key_name, "pkcs11:", 7)) {
 		ENGINE *e;
 
@@ -131,17 +142,16 @@ static EVP_PKEY *read_private_key(const char *private_key_name)
 		private_key = ENGINE_load_private_key(e, private_key_name,
 						      NULL, NULL);
 		ERR(!private_key, "%s", private_key_name);
-	} else {
-		BIO *b;
-
-		b = BIO_new_file(private_key_name, "rb");
-		ERR(!b, "%s", private_key_name);
-		private_key = PEM_read_bio_PrivateKey(b, NULL, pem_pw_cb,
-						      NULL);
-		ERR(!private_key, "%s", private_key_name);
-		BIO_free(b);
+		return private_key;
 	}
+#endif
 
+	b = BIO_new_file(private_key_name, "rb");
+	ERR(!b, "%s", private_key_name);
+	private_key = PEM_read_bio_PrivateKey(b, NULL, pem_pw_cb,
+					      NULL);
+	ERR(!private_key, "%s", private_key_name);
+	BIO_free(b);
 	return private_key;
 }
 
@@ -207,6 +217,7 @@ int main(int argc, char **argv)
 	ERR_clear_error();
 
 	key_pass = getenv("KBUILD_SIGN_PIN");
+
 	do {
 		opt = getopt(argc, argv, "sdpk");
 		switch (opt) {
@@ -270,7 +281,7 @@ int main(int argc, char **argv)
 				     CMS_NOSMIMECAP | CMS_NOATTR |
 				     use_keyid),
 		    "CMS_add1_signer");
-		ERR(CMS_final(cms, bm, NULL, CMS_NOCERTS | CMS_BINARY) < 0,
+		ERR(CMS_final(cms, bm, NULL, CMS_NOCERTS | CMS_BINARY) != 1,
 		    "CMS_final");
 
 		if (save_sig) {
@@ -281,7 +292,7 @@ int main(int argc, char **argv)
 			    "asprintf");
 			b = BIO_new_file(sig_file_name, "wb");
 			ERR(!b, "%s", sig_file_name);
-			ERR(i2d_CMS_bio_stream(b, cms, NULL, 0) < 0,
+			ERR(i2d_CMS_bio_stream(b, cms, NULL, 0) != 1,
 			    "%s", sig_file_name);
 			BIO_free(b);
 		}
@@ -309,7 +320,7 @@ int main(int argc, char **argv)
 	module_size = BIO_number_written(bd);
 
 	if (!raw_sig) {
-		ERR(i2d_CMS_bio_stream(bd, cms, NULL, 0) < 0, "%s", dest_name);
+		ERR(i2d_CMS_bio_stream(bd, cms, NULL, 0) != 1, "%s", dest_name);
 	} else {
 		BIO *b;
 
@@ -328,7 +339,7 @@ int main(int argc, char **argv)
 	ERR(BIO_write(bd, &sig_info, sizeof(sig_info)) < 0, "%s", dest_name);
 	ERR(BIO_write(bd, magic_number, sizeof(magic_number) - 1) < 0, "%s", dest_name);
 
-	ERR(BIO_free(bd) < 0, "%s", dest_name);
+	ERR(BIO_free(bd) != 1, "%s", dest_name);
 
 	/* Finally, if we're signing in place, replace the original. */
 	if (replace_orig)
